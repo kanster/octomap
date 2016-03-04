@@ -63,6 +63,7 @@ void printUsage(char* self){
             "  -discretize (approximate raycasting on discretized coordinates, speeds up insertion) \n"
             "  -clamping <p_min> <p_max> (override default sensor model clamping probabilities between 0..1)\n"
             "  -sensor <p_miss> <p_hit> (override default sensor model hit and miss probabilities between 0..1)"
+            "  -raw (write the raw sensor laser data to disk, <laser>.laser and poses)"
   "\n";
 
 
@@ -108,6 +109,7 @@ int main(int argc, char** argv) {
   double res = 0.1;
   string graphFilename = "";
   string treeFilename = "";
+  string rawdir = "";
   double maxrange = -1;
   int max_scan_no = -1;
   bool detailedLog = false;
@@ -165,6 +167,10 @@ int main(int argc, char** argv) {
       probMiss = atof(argv[++arg]);
       probHit = atof(argv[++arg]);
     }
+    else if (! strcmp(argv[arg], "-raw")) {
+      rawdir = std::string( argv[++arg] );
+      cout << "write raw data to " << rawdir << endl;
+    }
     else {
       printUsage(argv[0]);
     }
@@ -193,6 +199,10 @@ int main(int argc, char** argv) {
   std::string treeFilenameOT = treeFilename + ".ot";
   std::string treeFilenameMLOT = treeFilename + "_ml.ot";
 
+
+
+
+
   cout << "\nReading Graph file\n===========================\n";
   ScanGraph* graph = new ScanGraph();
   if (!graph->readBinary(graphFilename))
@@ -210,6 +220,7 @@ int main(int argc, char** argv) {
 
   // transform pointclouds first, so we can directly operate on them later
   if (!dontTransformNodes) {
+    cout << "\n Transform to global frame\n";
     for (ScanGraph::iterator scan_it = graph->begin(); scan_it != graph->end(); scan_it++) {
 
       pose6d frame_origin = (*scan_it)->pose;
@@ -242,10 +253,34 @@ int main(int argc, char** argv) {
   tree->setProbMiss(probMiss);
 
 
+  std::string raw_pose_path = rawdir+"/poses";
+  ofstream raw_pose_out( raw_pose_path.c_str() );
+
+
   gettimeofday(&start, NULL);  // start timer
   size_t numScans = graph->size();
   size_t currentScan = 1;
   for (ScanGraph::iterator scan_it = graph->begin(); scan_it != graph->end(); scan_it++) {
+
+    // write pose
+    pose6d frame_p = (*scan_it)->pose;
+    raw_pose_out << frame_p.x() << " " << frame_p.y() << " " << frame_p.z() << " "
+                 << frame_p.rot().u() << " " << frame_p.rot().x() << " " << frame_p.rot().y() << " " << frame_p.rot().z()<< endl;
+
+    // write laser data
+    char ci[3];
+    sprintf( ci, "%d", int(currentScan) );
+    std::string laser_path = rawdir+"/"+ci+".laser";
+    Pointcloud* scan = (*scan_it)->scan;
+    ofstream laser_out( laser_path.c_str() );
+    for ( size_t ii = 0; ii < scan->size(); ++ ii ) {
+      point3d & pt = (*scan)[ii];
+      laser_out << pt(0) << " " << pt(1) << " " << pt(2) << endl;
+    }
+    laser_out.close();
+
+
+
     if (max_scan_no > 0) cout << "("<<currentScan << "/" << max_scan_no << ") " << flush;
     else cout << "("<<currentScan << "/" << numScans << ") " << flush;
 
@@ -268,6 +303,8 @@ int main(int argc, char** argv) {
     currentScan++;
   }
   gettimeofday(&stop, NULL);  // stop timer
+
+  raw_pose_out.close();
   
   double time_to_insert = (stop.tv_sec - start.tv_sec) + 1.0e-6 *(stop.tv_usec - start.tv_usec);
 
