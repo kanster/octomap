@@ -1,6 +1,11 @@
 OctoMap - An Efficient Probabilistic 3D Mapping Framework Based on Octrees.
 ===========================================================================
 
+#### Modification to graph2tree
+Original laser scan data and poses are written to disk with option "-raw".
+------------------------------
+
+
 http://octomap.github.io
 
 Originally developed by Kai M. Wurm and Armin Hornung, University of Freiburg, Copyright (C) 2009-2014.
