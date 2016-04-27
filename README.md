@@ -1,8 +1,11 @@
 OctoMap - An Efficient Probabilistic 3D Mapping Framework Based on Octrees.
 ===========================================================================
 
-#### Modification to graph2tree
-Original laser scan data and poses are written to disk with option "-raw".
+1. Modification to graph2tree: Original laser scan data and poses are written to disk with option "-raw".
+2. Add pointcloud2tree 
+
+
+
 ------------------------------
 
 
